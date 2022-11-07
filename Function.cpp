@@ -13,6 +13,276 @@ LButton goBack;
 LButton sound;
 LTimer timer;
 
+//initialization func
+bool LFunction::init()
+{
+	//Initialization flag
+	bool success = true;
+
+	//Initialize SDL
+	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+	{
+		cout << "SDL could not initialize! SDL Error: " << SDL_GetError() << endl;
+		success = false;
+	}
+	else
+	{
+		//Set texture filtering to linear
+		if (!SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1"))
+		{
+			cout << "Warning: Linear texture filtering not enabled!";
+		}
+
+		//Create window
+		window = SDL_CreateWindow(WINDOW_TITLE.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+		if (window == NULL)
+		{
+			cout << "Window could not be created! SDL Error: " << SDL_GetError() << endl;
+			success = false;
+		}
+		else
+		{
+			//Create vsynced renderer for window
+			renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+			if (renderer == NULL)
+			{
+				cout << "Renderer could not be created! SDL Error: " << SDL_GetError() << endl;
+				success = false;
+			}
+			else
+			{
+				//Initialize renderer color
+				SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+
+				//Initialize PNG loading
+				int imgFlags = IMG_INIT_PNG;
+				if (!(IMG_Init(imgFlags) & imgFlags))
+				{
+					cout << "SDL_image could not initialize! SDL_image Error: " << IMG_GetError() << endl;
+					success = false;
+				}
+
+				//Initialize SDL_ttf
+				if (TTF_Init() == -1)
+				{
+					cout << "SDL_ttf could not initialize! SDL_ttf Error: " << TTF_GetError() << endl;
+					success = false;
+				}
+				//Initialize SDL_mixer
+				if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0)
+				{
+					cout << "SDL_mixer could not initialize! SDL_mixer Error: " << Mix_GetError() << endl;
+					success = false;
+				}
+			}
+		}
+	}
+
+	return success;
+}
+
+bool LFunction::loadmedia()
+{
+	bool success = true;
+	//Open image of tiles
+	if (!Tiles_image.loadFromFile("res/images/tiles5.jpg"))
+	{
+		cout << "Can't load this image from file!";
+		success = false;
+	}
+	else
+	{
+		//Set sprites
+		for (int i = 0; i < 12; ++i)
+		{
+			Tilesprites[i].x = i * TILE_SIZE;
+			Tilesprites[i].y = 0;
+			Tilesprites[i].w = TILE_SIZE;
+			Tilesprites[i].h = TILE_SIZE;
+		}
+	}
+	//load digits
+	if (!Digits.loadFromFile("res/images/Untitled1.png"))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	else
+	{
+		//Set sprites
+		for (int i = 0; i < 10; i++)
+		{
+			Digitsprites[i].x = i * 28;
+			Digitsprites[i].y = 0;
+			Digitsprites[i].w = 28;
+			Digitsprites[i].h = 46;
+		}
+	}
+	//load easy table
+	if (!easyTable.loadFromFile("res/images/easy.png"))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	//load medium table
+	if (!mediumTable.loadFromFile("res/images/medium.png"))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	//load hard table
+	if (!hardTable.loadFromFile("res/images/hard.png"))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	//load face
+	if (!winFace.loadFromFile("res/images/winface.png"))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	if (!loseFace.loadFromFile("res/images/loseface.png"))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	if (!playingFace.loadFromFile("res/images/playingface.png"))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	if (!back.loadFromFile("res/images/backicon.png"))
+	{
+		success = false;
+	}
+	if (!sound_on.loadFromFile("res/images/unmute.png"))
+	{
+		success = false;
+	}
+	if (!sound_off.loadFromFile("res/images/mute.png"))
+	{
+		success = false;
+	}
+	//Open the font 
+	gFont = TTF_OpenFont("res/font.ttf", 20);
+	if (gFont == NULL)
+	{
+		cout << "Failed to load lazy font! SDL_ttf Error: " << TTF_GetError() << endl;
+		success = false;
+	}
+	//load text
+	SDL_Color textcolor1 = { 255,255,255 };
+	if (!menu.loadFromRenderedText("START", textcolor1))
+	{
+		cout << "Fail";
+	}
+	if (!menu1.loadFromRenderedText("EXIT", textcolor1))
+	{
+		cout << "Fail";
+	}
+	SDL_Color color = { 255,0,0 };
+	if (!menuColor.loadFromRenderedText("START", color))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	if (!menu1Color.loadFromRenderedText("EXIT", color))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	//Load music
+	loseMusic = Mix_LoadMUS("res/audio/scratch.wav");
+	if (loseMusic == NULL)
+	{
+		cout << "Failed to load beat music! SDL_mixer Error: " << Mix_GetError() << endl;
+		success = false;
+	}
+
+	//Load sound effects
+	winMusic = Mix_LoadMUS("res/audio/beat.wav");
+	if (winMusic == NULL)
+	{
+		cout << "Failed to load beat music! SDL_mixer Error: " << Mix_GetError() << endl;
+		success = false;
+	}
+
+	click = Mix_LoadWAV("res/audio/click.wav");
+	if (click == NULL)
+	{
+		cout << "Failed to load beat music! SDL_mixer Error: " << Mix_GetError() << endl;
+		success = false;
+	}
+	return success;
+}
+
+bool LFunction::loadMenuMedia()
+{
+	bool success = true;
+	//load background of menu
+	if (!menuTheme.loadFromFile("res/images/menu.jpg"))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	//load level choice
+	if (!levelTheme.loadFromFile("res/images/mode.jpg"))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	if (!customStart.loadFromFile("res/images/custom.png"))
+	{
+		cout << "Fail";
+		success = true;
+	}
+	//load choice text
+	SDL_Color textColor = { 255,255,255 };
+	if (!easyChoice.loadFromRenderedText("EASY MODE", textColor))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	if (!mediumChoice.loadFromRenderedText("MEDIUM MODE", textColor))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	if (!hardChoice.loadFromRenderedText("HARD MODE", textColor))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	if (!customChoice.loadFromRenderedText("CUSTOM MODE", textColor))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	SDL_Color textcolor = { 255,0,0 };
+	if (!easyChoiceColor.loadFromRenderedText("EASY MODE", textcolor))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	if (!mediumChoiceColor.loadFromRenderedText("MEDIUM MODE", textcolor))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	if (!hardChoiceColor.loadFromRenderedText("HARD MODE", textcolor))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	if (!customChoiceColor.loadFromRenderedText("CUSTOM MODE", textcolor))
+	{
+		cout << "Fail";
+		success = false;
+	}
+	return success;
+}
+
 void LFunction::handleEvent()
 {
 	SDL_Event e;
