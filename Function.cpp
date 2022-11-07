@@ -283,6 +283,406 @@ bool LFunction::loadMenuMedia()
 	return success;
 }
 
+//initialization games
+void LFunction::CreateBoard()
+{
+	srand(time(0));
+	int mine = 0;
+	//Initialization 
+	for (int i = 0; i < BOARD_SIZE_X; i++)
+	{
+		for (int j = 0; j < BOARD_SIZE_Y; j++)
+		{
+			sBoard[i][j] = 10;
+			board[i][j] = 0;
+		}
+	}
+
+	//Random mines in board
+	while (mine < NumberOfMines)
+	{
+		int i = rand() % BOARD_SIZE_X;
+		int j = rand() % BOARD_SIZE_Y;
+		if (board[i][j] == 9) continue;
+		board[i][j] = 9;
+		mine++;
+	}
+
+	//Calculate the number of mines around each cell
+	for (int i = 0; i < BOARD_SIZE_X; i++)
+	{
+		for (int j = 0; j < BOARD_SIZE_Y; j++)
+		{
+			if (board[i][j] == 9) continue;
+			for (int x = -1; x <= 1; x++)
+			{
+				for (int y = -1; y <= 1; y++)
+				{
+					int xpos = i + x;
+					int ypos = j + y;
+					if (xpos < 0 || xpos>BOARD_SIZE_X - 1 || ypos<0 || ypos>BOARD_SIZE_Y - 1) continue;
+					if (board[xpos][ypos] == 9) board[i][j]++;
+				}
+			}
+		}
+	}
+}
+
+void LFunction::setButtonPosition()
+{
+	face.setPosition(BOARD_SIZE_X * TILE_SIZE / 2, digit_y);
+	goBack.setPosition(0, 0);
+	sound.setPosition(timeDigit_x - 10, 0);
+	for (int i = 0; i < BOARD_SIZE_X; ++i)
+	{
+		for (int j = 0; j < BOARD_SIZE_Y; ++j)
+		{
+			Buttons[i][j].setPosition(i * TILE_SIZE + distance_x, j * TILE_SIZE + distance_y);
+		}
+	}
+}
+
+void LFunction::createMenu()
+{
+	menuTheme.render(0, 0);
+	menu.render(300, 400);
+	menu1.render(450, 400);
+	SDL_RenderPresent(renderer);
+}
+
+void LFunction::createModeMenu()
+{
+	levelTheme.render(0, 0);
+	easyChoice.render(300, 150);
+	mediumChoice.render(300, 200);
+	hardChoice.render(300, 250);
+	customChoice.render(300, 300);
+}
+
+void LFunction::showMenu()
+{
+	bool startInside = false;
+	bool exitInside = false;
+	bool isMenuShowing = true;
+	SDL_Event event;
+	createMenu();
+	while (isMenuShowing)
+	{
+		while (SDL_PollEvent(&event) != 0)
+		{
+			if (event.type == SDL_QUIT)
+			{
+				mainLoop = false;
+				isMenuShowing = false;
+			}
+			if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEMOTION)
+			{
+				int x, y;
+				SDL_GetMouseState(&x, &y);
+				if (x > 300 && x < 300 + menu.getWidth() && y > 400 && y < 400 + menu.getHeight()) startInside = true;
+				else startInside = false;
+				if (x > 450 && x < 450 + menu1.getWidth() && y > 400 && y < 400 + menu1.getHeight()) exitInside = true;
+				else exitInside = false;
+				if (event.type == SDL_MOUSEBUTTONDOWN)
+				{
+					if (event.button.button == SDL_BUTTON_LEFT)
+					{
+						if (startInside == true)
+						{
+							start = true;
+							isMenuShowing = false;
+						}
+						if (exitInside == true)
+						{
+							mainLoop = false;
+							isMenuShowing = false;
+
+						}
+					}
+				}
+				if (event.type == SDL_MOUSEMOTION)
+				{
+					if (startInside == true)
+					{
+						menuColor.render(300, 400);
+					}
+					else menu.render(300, 400);
+					if (exitInside == true)
+					{
+						menu1Color.render(450, 400);
+
+					}
+					else menu1.render(450, 400);
+				}
+
+			}
+			SDL_RenderPresent(renderer);
+		}
+	}
+}
+
+void LFunction::showModeChoice()
+{
+	bool easyInside = false;
+	bool mediumInside = false;
+	bool hardInside = false;
+	bool customInside = false;
+	SDL_Event event;
+	createModeMenu();
+	while (isChoosing)
+	{
+		while (SDL_PollEvent(&event) != 0)
+		{
+			if (event.type == SDL_QUIT)
+			{
+				mainLoop = false;
+				isChoosing = false;
+			}
+			if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEMOTION)
+			{
+				int x, y;
+				SDL_GetMouseState(&x, &y);
+				if (x > 300 && x < 300 + easyChoice.getWidth() && y > 150 && y < 150 + easyChoice.getHeight()) easyInside = true;
+				else easyInside = false;
+				if (x > 300 && x < 300 + mediumChoice.getWidth() && y > 200 && y < 200 + mediumChoice.getHeight()) mediumInside = true;
+				else mediumInside = false;
+				if (x > 300 && x < 300 + hardChoice.getWidth() && y > 250 && y < 250 + hardChoice.getHeight()) hardInside = true;
+				else hardInside = false;
+				if (x > 300 && x < 300 + customChoice.getWidth() && y > 300 && y < 300 + customChoice.getHeight()) customInside = true;
+				else customInside = false;
+				if (event.type == SDL_MOUSEBUTTONDOWN)
+				{
+					if (event.button.button == SDL_BUTTON_LEFT)
+					{
+						if (easyInside == true)
+						{
+							isRunning = true;
+							isChoosing = false;
+							customMode = false;
+							timer.start();
+							easy = true;
+							medium = false;
+							hard = false;
+							cus = false;
+							SDL_SetWindowSize(window, 294, 436);
+							setGameMode(9, 9, 10, 21, 163, 25, 80, 235, BOARD_SIZE_X, BOARD_SIZE_Y, NumberOfMines, mineCountLeft, CountTileLeft, distance_x, distance_y, digit_x, digit_y, timeDigit_x);
+							CreateBoard();
+						}
+						if (mediumInside == true)
+						{
+							isRunning = true;
+							isChoosing = false;
+							customMode = false;
+							timer.start();
+							easy = false;
+							medium = true;
+							hard = false;
+							cus = false;
+							SDL_SetWindowSize(window, 488, 630);
+							setGameMode(16, 16, 40, 21, 163, 25, 80, 430, BOARD_SIZE_X, BOARD_SIZE_Y, NumberOfMines, mineCountLeft, CountTileLeft, distance_x, distance_y, digit_x, digit_y, timeDigit_x);
+							CreateBoard();
+						}
+						if (hardInside == true)
+						{
+							isRunning = true;
+							isChoosing = false;
+							customMode = false;
+							timer.start();
+							easy = false;
+							medium = false;
+							hard = true;
+							cus = false;
+							SDL_SetWindowSize(window, 880, 632);
+							setGameMode(30, 16, 99, 21, 163, 25, 80, 820, BOARD_SIZE_X, BOARD_SIZE_Y, NumberOfMines, mineCountLeft, CountTileLeft, distance_x, distance_y, digit_x, digit_y, timeDigit_x);
+							CreateBoard();
+						}
+						if (customInside == true)
+						{
+							isChoosing = false;
+							customMode = true;
+							easy = false;
+							medium = false;
+							hard = false;
+							cus = true;
+						}
+					}
+				}
+				if (event.type == SDL_MOUSEMOTION)
+				{
+					if (easyInside == true) easyChoiceColor.render(300, 150);
+					else easyChoice.render(300, 150);
+					if (mediumInside == true) mediumChoiceColor.render(300, 200);
+					else mediumChoice.render(300, 200);
+					if (hardInside == true) hardChoiceColor.render(300, 250);
+					else hardChoice.render(300, 250);
+					if (customInside == true) customChoiceColor.render(300, 300);
+					else customChoice.render(300, 300);
+				}
+			}
+			SDL_RenderPresent(renderer);
+		}
+	}
+}
+
+void LFunction::CustomMode()
+{
+	SDL_Event e{};
+	SDL_Color black = { 0,0,0,0 };
+	SDL_SetWindowSize(window, 400, 600);
+	customStart.render(0, 0);
+	string width, height, mine;
+	int w = 0, h = 0, m = 0;
+	char inputChar;
+	bool widthInside = false;
+	bool heightInside = false;
+	bool mineInside = false;
+	bool play = false;
+	while (customMode)
+	{
+		SDL_StartTextInput();
+		while (SDL_PollEvent(&e) != 0)
+		{
+			switch (e.type)
+			{
+			case SDL_QUIT:
+				customMode = false;
+				mainLoop = false;
+				break;
+			case SDL_MOUSEBUTTONDOWN:
+				int x, y;
+				SDL_GetMouseState(&x, &y);
+				if (x > 200 && x < 267 && y>374 && y < 394) widthInside = true;
+				else widthInside = false;
+				if (x > 200 && x < 267 && y>400 && y < 420) heightInside = true;
+				else heightInside = false;
+				if (x > 200 && x < 267 && y>427 && y < 447) mineInside = true;
+				else mineInside = false;
+				if (x > 150 && x < 250 && y>488 && y < 526) play = true;
+				else play = false;
+				break;
+			case SDL_TEXTINPUT:
+				inputChar = e.text.text[0];
+				if (inputChar >= '0' && inputChar <= '9')
+				{
+					if (widthInside && width.length() < 6)
+					{
+						width += e.text.text;
+						w *= 10;
+						w += (int)(inputChar - 48);
+						wInput.loadFromRenderedText(width.c_str(), black);
+					}
+					else if (heightInside && height.length() < 6)
+					{
+						height += e.text.text;
+						h *= 10;
+						h += (int)(inputChar - 48);
+						hInput.loadFromRenderedText(height.c_str(), black);
+					}
+					else if (mineInside && mine.length() < 6)
+					{
+						mine += e.text.text;
+						m *= 10;
+						m += (int)(inputChar - 48);
+						mInput.loadFromRenderedText(mine.c_str(), black);
+					}
+				}
+				break;
+			case SDL_KEYDOWN:
+				if (widthInside && e.key.keysym.sym == SDLK_BACKSPACE && width.length() > 0)
+				{
+					width.pop_back();
+					w /= 10;
+					wInput.loadFromRenderedText(width.c_str(), black);
+				}
+				else if (heightInside && e.key.keysym.sym == SDLK_BACKSPACE && height.length() > 0)
+				{
+					height.pop_back();
+					h /= 10;
+					hInput.loadFromRenderedText(height.c_str(), black);
+				}
+				else if (mineInside && e.key.keysym.sym == SDLK_BACKSPACE && mine.length() > 0)
+				{
+					mine.pop_back();
+					m /= 10;
+					mInput.loadFromRenderedText(mine.c_str(), black);
+				}
+				else if (e.key.keysym.sym == SDLK_DOWN)
+				{
+					if (widthInside)
+					{
+						widthInside = false;
+						heightInside = true;
+						mineInside = false;
+					}
+					else if (heightInside)
+					{
+						widthInside = false;
+						heightInside = false;
+						mineInside = true;
+					}
+					else if (mineInside)
+					{
+						widthInside = true;
+						heightInside = false;
+						mineInside = false;
+					}
+				}
+				else if (e.key.keysym.sym == SDLK_UP)
+				{
+					if (widthInside)
+					{
+						widthInside = false;
+						heightInside = false;
+						mineInside = true;
+					}
+					else if (heightInside)
+					{
+						widthInside = true;
+						heightInside = false;
+						mineInside = false;
+					}
+					else if (mineInside)
+					{
+						widthInside = false;
+						heightInside = true;
+						mineInside = false;
+					}
+				}
+				break;
+			default:
+				break;
+			}
+		}
+
+		wInput.render(201, 370);
+		hInput.render(201, 397);
+		mInput.render(201, 423);
+
+		if (play == true)
+		{
+			isRunning = true;
+			customMode = false;
+			play = false;
+			timer.start();
+			SDL_SetWindowSize(window, w * TILE_SIZE, h * TILE_SIZE + 110);
+			setGameMode(w, h, m, 0, 110, 10, 60, w * TILE_SIZE - 40, BOARD_SIZE_X, BOARD_SIZE_Y, NumberOfMines, mineCountLeft, CountTileLeft, distance_x, distance_y, digit_x, digit_y, timeDigit_x);
+			CreateBoard();
+		}
+		SDL_StopTextInput();
+		SDL_RenderPresent(renderer);
+	}
+
+	width = "";
+	height = "";
+	mine = "";
+	widthInside = false;
+	heightInside = false;
+	mineInside = false;
+	wInput.free();
+	hInput.free();
+	mInput.free();
+}
+
 void LFunction::handleEvent()
 {
 	SDL_Event e;
